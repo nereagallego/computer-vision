@@ -60,19 +60,36 @@ def alien(img,rgbColor):
 def poster(img):
     img[img >= 170]= 255
     img[img < 85] = 0
-    img[ ((img > 85) & (img < 170)).all()] = 128
+    img[np.bitwise_and(img > 85, img < 170)] = 128
     return img
-    
+
+def barrel(img, K1: float, K2: float):
+    xcent, ycent = int(img.shape[1]/2), int(img.shape[0]/2)
+    map_x = np.zeros((img.shape[0], img.shape[1]), dtype=np.float32)
+    map_y = np.zeros((img.shape[0], img.shape[1]), dtype=np.float32)
+    for i in range(map_x.shape[0]):
+        for j in range(map_x.shape[1]):
+            r2 = (j - xcent) ** 2 + (i - ycent) **2
+            map_x[i,j] = j + (j - xcent) * K1 * r2 + (j - xcent) * K2 * (r2 ** 2) 
+    for j in range(map_y.shape[1]):
+        for i in range(map_y.shape[0]):
+            r2 = (j - xcent) ** 2 + (i - ycent) **2
+            map_y[i,j] = i + (i - ycent) * K1 * r2 + (i - ycent) * K2 * (r2 ** 2)
+
+    dst = cv2.remap(img, map_x, map_y, cv2.INTER_LINEAR)
+    return dst
+            
 
 def leerOpcion():
     opcion = -1
-    while opcion < 0 or opcion > 4:
+    while opcion < 0 or opcion > 5:
         
         print('0 - salir')
         print('1 - contraste')
         print('2 - equalizacion')
         print('3 - alien')
         print('4 - poster')
+        print('5 - barrel')
         opcion = int(input())
     return opcion
 
@@ -116,6 +133,10 @@ if leido == True:
         elif opcion == 4:
             result = poster(img)
             cv2.imshow('Poster image', result)
+            cv2.waitKey(0)
+        elif opcion == 5:
+            result = barrel(img,0.00000000005, 0.000000000005)
+            cv2.imshow("Barrel image", result)
             cv2.waitKey(0)
         
         cv2.waitKey()
