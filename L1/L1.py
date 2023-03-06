@@ -60,7 +60,7 @@ def alien(img,rgbColor):
 def poster(img):
     img[img >= 170]= 255
     img[img < 85] = 0
-    img[ img > 85 & img < 170] = 128
+    img[ ((img > 85) & (img < 170)).all()] = 128
     return img
     
 
