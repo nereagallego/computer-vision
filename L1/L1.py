@@ -71,10 +71,13 @@ def barrel(img, K1: float, K2: float):
         for j in range(map_x.shape[1]):
             r2 = (j - xcent) ** 2 + (i - ycent) **2
             map_x[i,j] = j + (j - xcent) * K1 * r2 + (j - xcent) * K2 * (r2 ** 2) 
-    for j in range(map_y.shape[1]):
-        for i in range(map_y.shape[0]):
-            r2 = (j - xcent) ** 2 + (i - ycent) **2
             map_y[i,j] = i + (i - ycent) * K1 * r2 + (i - ycent) * K2 * (r2 ** 2)
+# =============================================================================
+#     for j in range(map_y.shape[1]):
+#         for i in range(map_y.shape[0]):
+#             r2 = (j - xcent) ** 2 + (i - ycent) **2
+# =============================================================================
+            
 
     dst = cv2.remap(img, map_x, map_y, cv2.INTER_LINEAR)
     return dst
@@ -82,7 +85,7 @@ def barrel(img, K1: float, K2: float):
 
 def leerOpcion():
     opcion = -1
-    while opcion < 0 or opcion > 5:
+    while opcion < 0 or opcion > 6:
         
         print('0 - salir')
         print('1 - contraste')
@@ -90,6 +93,7 @@ def leerOpcion():
         print('3 - alien')
         print('4 - poster')
         print('5 - barrel')
+        print('6 - cojin')
         opcion = int(input())
     return opcion
 
@@ -133,11 +137,16 @@ if leido == True:
         elif opcion == 4:
             result = poster(img)
             cv2.imshow('Poster image', result)
-            cv2.waitKey(0)
+            
         elif opcion == 5:
             result = barrel(img,0.00000000005, 0.000000000005)
+           # result = barrel(img,-0.00005, -0.0000005)
             cv2.imshow("Barrel image", result)
-            cv2.waitKey(0)
+            
+        elif opcion == 6:
+            result = barrel(img,-0.00000000005, -0.000000000005)
+            cv2.imshow("Pincushion image", result)
+            
         
         cv2.waitKey()
         cv2.destroyAllWindows()
