@@ -24,8 +24,9 @@ def contraste(img):
 
 
 def equalizar(img):
-    result = cv2.equalizeHist(img)
-    return result
+    img[:,:,0] = cv2.equalizeHist(img[:,:,0])
+    img[:,:,2] = cv2.equalizeHist(img[:,:,2])
+    return img
 
 
 def alien(img,rgbColor):
@@ -44,16 +45,12 @@ def alien(img,rgbColor):
 
     # Bitwise-AND mask and original image
     result = cv2.bitwise_and(hsvColor,hsvColor, mask= mask)
-    cv2.imshow('Mask',mask)
-    cv2.waitKey(0)
+# =============================================================================
+#     cv2.imshow('Mask',mask)
+#     cv2.waitKey(0)
+# =============================================================================
     mask = cv2.cvtColor(result, cv2.COLOR_HSV2BGR)
     cv2.addWeighted(img, 0.2, mask, 0.8, 0, result)
-
-
-  #  img_hsv[:, :, 0] = (img_hsv[:, :, 0] - int(255 * 0.3333)) % 255
-  #  img_hsv[:, :, 1] = (img_hsv[:, :, 1] - int(255 * 0.05)) % 255
-  #  img_hsv[:, :, 2] = (img_hsv[:, :, 2] - int(255 * 0.05)) % 255
-
 
     return result
 
@@ -96,9 +93,9 @@ def leerOpcion():
         print('6 - cojin')
         opcion = int(input())
     return opcion
-
-#leido, img = cap.read()
-img = cv2.imread('color.jpg', cv2.IMREAD_COLOR)
+cap = cv2.VideoCapture(0)
+leido, img = cap.read()
+#img = cv2.imread('color.jpg', cv2.IMREAD_COLOR)
 img2 = cv2.imread('lena.jpg', cv2.IMREAD_GRAYSCALE)
 
 leido = True
@@ -109,57 +106,152 @@ if leido == True:
     while opcion != 0:
 	#cv2.imwrite("foto.png", frame)
         if opcion == 1:
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                result = contraste(frame)
+                # Display the resulting frame
+                cv2.imshow('Contraste', result)
+                if cv2.waitKey(1) == ord('q'):
+                    break
             
-            cv2.imshow('Foto tomada', img)
+           # cv2.imshow('Foto tomada', img)
            
             # converting to LAB color space
             
-            result = contraste(img)
-            cv2.imshow('Foto tomada 2', result)
+         #   result = contraste(img)
+          #  cv2.imshow('Foto tomada 2', result)
         elif opcion == 2:
-        
-            cv2.imshow("Foto en gris",img2)
-            plt.hist(img2.ravel(),256,[0,256]); plt.show()
-            result2 = equalizar(img2)
-            cv2.imshow('Foto equalizada', result2)
-            plt.hist(result2.ravel(),256,[0,256]); plt.show()
+
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                result = equalizar(frame)
+                # Display the resulting frame
+                cv2.imshow('Equalization', result)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+
+
+            # cv2.imshow("Foto en gris",img2)
+            # plt.hist(img2.ravel(),256,[0,256]); plt.show()
+            # result2 = equalizar(img2)
+            # cv2.imshow('Foto equalizada', result2)
+            # plt.hist(result2.ravel(),256,[0,256]); plt.show()
+
         elif opcion == 3:
-            img_copy = np.zeros(img.shape, np.uint8);
-            img_copy[:,:,0] = 255
-        #    cv2.imshow('Masked Image',img_copy)
-            result = alien(img,img_copy)
+            
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                img_copy = np.zeros(frame.shape, np.uint8);
+                img_copy[:,:,0] = 255
+                result = alien(frame,img_copy)
+                # Display the resulting frame
+                cv2.imshow('Alien', result)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            
+            
+        #     img_copy = np.zeros(img.shape, np.uint8);
+        #     img_copy[:,:,0] = 255
+        # #    cv2.imshow('Masked Image',img_copy)
+        #     result = alien(img,img_copy)
         
-            # display the mask and masked image
-            cv2.imshow('Masked Image',result)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+        #     # display the mask and masked image
+        #     cv2.imshow('Masked Image',result)
+        #     cv2.waitKey(0)
+        #     cv2.destroyAllWindows()
 
         elif opcion == 4:
-            result = poster(img)
-            cv2.imshow('Poster image', result)
+            
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                result = poster(frame)
+                # Display the resulting frame
+                cv2.imshow('Poster frame', result)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            
+            
+            
+# =============================================================================
+#             result = poster(img)
+#             cv2.imshow('Poster image', result)
+# =============================================================================
             
         elif opcion == 5:
-            result = barrel(img,0.00000000005, 0.000000000005)
-           # result = barrel(img,-0.00005, -0.0000005)
-            cv2.imshow("Barrel image", result)
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                result = barrel(frame,-0.000005, -0.00000000005)
+                # Display the resulting frame
+                cv2.imshow('Barrel frame', result)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            
+# =============================================================================
+#             result = barrel(img,-0.0000000005, -0.00000000005)
+#            # result = barrel(img,-0.00005, -0.0000005)
+#             cv2.imshow("Barrel image", result)
+# =============================================================================
             
         elif opcion == 6:
-            result = barrel(img,-0.00000000005, -0.000000000005)
-            cv2.imshow("Pincushion image", result)
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                result = barrel(frame,0.0000005, -0.0000000000005)
+                # Display the resulting frame
+                cv2.imshow("Pincushion image", result)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+            
+            
+            # result = barrel(img,0.0000005, -0.0000000000005)
+            # cv2.imshow("Pincushion image", result)
             
         
-        cv2.waitKey()
+      #  cv2.waitKey()
         cv2.destroyAllWindows()
         
         opcion = leerOpcion()
         
-        
-        """
-        cv2.convertScaleAbs(frame,1.5,0)
-        cv2.imshow('Foto tomada 2', frame)
-        cv2.waitKey()
-        cv2.destroyAllWindows()
-        print("Foto tomada correctamente")
-    """
 else:
 	print("Error al acceder a la cámara")
