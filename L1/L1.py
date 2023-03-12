@@ -72,9 +72,8 @@ def barrel(img, K1: float, K2: float):
     return dst
 
 def gaussianFilter(img):
-    kernel = np.ones((5,5),np.float32)/25
-    dst = cv2.filter2D(img,-1,kernel)
-    return dst
+    blur = cv2.GaussianBlur(img,(5,5),0)
+    return blur
             
 
 def leerOpcion():
