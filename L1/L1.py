@@ -18,8 +18,7 @@ def contraste(img):
     enhanced_img = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
     # Stacking the original image with the enhanced image
-    result = np.hstack((img, enhanced_img))
-    return result
+    return enhanced_img
 
 
 
@@ -68,21 +67,19 @@ def barrel(img, K1: float, K2: float):
         for j in range(map_x.shape[1]):
             r2 = (j - xcent) ** 2 + (i - ycent) **2
             map_x[i,j] = j + (j - xcent) * K1 * r2 + (j - xcent) * K2 * (r2 ** 2) 
-            map_y[i,j] = i + (i - ycent) * K1 * r2 + (i - ycent) * K2 * (r2 ** 2)
-# =============================================================================
-#     for j in range(map_y.shape[1]):
-#         for i in range(map_y.shape[0]):
-#             r2 = (j - xcent) ** 2 + (i - ycent) **2
-# =============================================================================
-            
-
+            map_y[i,j] = i + (i - ycent) * K1 * r2 + (i - ycent) * K2 * (r2 ** 2)          
     dst = cv2.remap(img, map_x, map_y, cv2.INTER_LINEAR)
+    return dst
+
+def gaussianFilter(img):
+    kernel = np.ones((5,5),np.float32)/25
+    dst = cv2.filter2D(img,-1,kernel)
     return dst
             
 
 def leerOpcion():
     opcion = -1
-    while opcion < 0 or opcion > 6:
+    while opcion < 0 or opcion > 7:
         
         print('0 - salir')
         print('1 - contraste')
@@ -91,6 +88,7 @@ def leerOpcion():
         print('4 - poster')
         print('5 - barrel')
         print('6 - cojin')
+        print('7 - gaussian filter')
         opcion = int(input())
     return opcion
 cap = cv2.VideoCapture(0)
@@ -116,17 +114,12 @@ if leido == True:
                     break
                 # Our operations on the frame come here
                 result = contraste(frame)
+                Hori = np.concatenate((frame, result), axis=1)
                 # Display the resulting frame
-                cv2.imshow('Contraste', result)
+                cv2.imshow('Contraste', Hori)
                 if cv2.waitKey(1) == ord('q'):
                     break
             
-           # cv2.imshow('Foto tomada', img)
-           
-            # converting to LAB color space
-            
-         #   result = contraste(img)
-          #  cv2.imshow('Foto tomada 2', result)
         elif opcion == 2:
 
             cap = cv2.VideoCapture(0)
@@ -138,18 +131,12 @@ if leido == True:
                     print("Can't receive frame (stream end?). Exiting ...")
                     break
                 # Our operations on the frame come here
-                result = equalizar(frame)
+                result = equalizar(frame.copy())
                 # Display the resulting frame
-                cv2.imshow('Equalization', result)
+                Hori = np.concatenate((frame, result), axis=1)
+                cv2.imshow('Equalization', Hori)
                 if cv2.waitKey(1) == ord('q'):
                     break
-
-
-            # cv2.imshow("Foto en gris",img2)
-            # plt.hist(img2.ravel(),256,[0,256]); plt.show()
-            # result2 = equalizar(img2)
-            # cv2.imshow('Foto equalizada', result2)
-            # plt.hist(result2.ravel(),256,[0,256]); plt.show()
 
         elif opcion == 3:
             
@@ -165,21 +152,12 @@ if leido == True:
                 img_copy = np.zeros(frame.shape, np.uint8);
                 img_copy[:,:,0] = 255
                 result = alien(frame,img_copy)
+                Hori = np.concatenate((frame, result), axis=1)
                 # Display the resulting frame
-                cv2.imshow('Alien', result)
+                cv2.imshow('Alien', Hori)
                 if cv2.waitKey(1) == ord('q'):
                     break
             
-            
-        #     img_copy = np.zeros(img.shape, np.uint8);
-        #     img_copy[:,:,0] = 255
-        # #    cv2.imshow('Masked Image',img_copy)
-        #     result = alien(img,img_copy)
-        
-        #     # display the mask and masked image
-        #     cv2.imshow('Masked Image',result)
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
 
         elif opcion == 4:
             
@@ -192,18 +170,12 @@ if leido == True:
                     print("Can't receive frame (stream end?). Exiting ...")
                     break
                 # Our operations on the frame come here
-                result = poster(frame)
+                result = poster(frame.copy())
                 # Display the resulting frame
-                cv2.imshow('Poster frame', result)
+                Hori = np.concatenate((frame, result), axis=1)
+                cv2.imshow('Poster frame', Hori)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            
-            
-            
-# =============================================================================
-#             result = poster(img)
-#             cv2.imshow('Poster image', result)
-# =============================================================================
             
         elif opcion == 5:
             cap = cv2.VideoCapture(0)
@@ -217,15 +189,10 @@ if leido == True:
                 # Our operations on the frame come here
                 result = barrel(frame,-0.000005, -0.00000000005)
                 # Display the resulting frame
-                cv2.imshow('Barrel frame', result)
+                Hori = np.concatenate((frame, result), axis=1)
+                cv2.imshow('Barrel frame', Hori)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            
-# =============================================================================
-#             result = barrel(img,-0.0000000005, -0.00000000005)
-#            # result = barrel(img,-0.00005, -0.0000005)
-#             cv2.imshow("Barrel image", result)
-# =============================================================================
             
         elif opcion == 6:
             cap = cv2.VideoCapture(0)
@@ -239,16 +206,28 @@ if leido == True:
                 # Our operations on the frame come here
                 result = barrel(frame,0.0000005, -0.0000000000005)
                 # Display the resulting frame
-                cv2.imshow("Pincushion image", result)
+                Hori = np.concatenate((frame, result), axis=1)
+                cv2.imshow("Pincushion image", Hori)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+        elif opcion == 7:
+            cap = cv2.VideoCapture(0)
+            while True:
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                # if frame is read correctly ret is True
+                if not ret:
+                    print("Can't receive frame (stream end?). Exiting ...")
+                    break
+                # Our operations on the frame come here
+                result = gaussianFilter(frame.copy())
+                # Display the resulting frame
+                Hori = np.concatenate((frame, result), axis=1)
+                cv2.imshow("Gaussian filter", Hori)
                 if cv2.waitKey(1) == ord('q'):
                     break
             
-            
-            # result = barrel(img,0.0000005, -0.0000000000005)
-            # cv2.imshow("Pincushion image", result)
-            
         
-      #  cv2.waitKey()
         cv2.destroyAllWindows()
         
         opcion = leerOpcion()
