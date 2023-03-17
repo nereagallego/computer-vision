@@ -30,17 +30,17 @@ def SobelOperator(imagen):
     grad_x_scaled = np.uint8(grad_x /2 + 128)
     grad_y_scaled = np.uint8(grad_y / 2 +128)
 
-    cv2.imshow('Gradiente en x', grad_x_scaled)
+    cv2.imshow('Gradiente en x sobel operator', grad_x_scaled)
     cv2.waitKey(0)
-    cv2.imshow('Gradiente en y', grad_y_scaled)
+    cv2.imshow('Gradiente en y sobel operator', grad_y_scaled)
     cv2.waitKey(0)
 
     abs_grad_x = cv2.convertScaleAbs(grad_x)
     abs_grad_y = cv2.convertScaleAbs(grad_y)
 
-    mod = np.sqrt(np.power(grad_x,2) + np.power(grad_y,2))
+    mod = np.sqrt(np.uint32(np.power(grad_x,2) + np.power(grad_y,2)))
 
-    cv2.imshow('Sobel operator', np.uint8(mod))
+    cv2.imshow('Modulo Sobel operator', np.uint8(mod))
     cv2.waitKey(0)
     # sobel_X = cv2.Sobel(imagen, cv2.CV_64F, 1, 0) 
     # sobel_X_abs = np.uint8(np.absolute(sobel_X)) 
@@ -49,7 +49,7 @@ def SobelOperator(imagen):
 
     # sobel_XY_combined = cv2.bitwise_or(sobel_Y_abs,sobel_X_abs)
     orientacion = np.arctan2(grad_y,grad_x)
-    cv2.imshow('Sobel operator', np.uint8(orientacion))
+    cv2.imshow('Direction Sobel operator', np.uint8(orientacion))
     cv2.waitKey(0)
 
 
@@ -76,35 +76,46 @@ def gaussianaDerivada(sigma):
     return G
 
 def K(G, G2):
-    suma = 0
+    K1 = 0
+    K2 = 0
     for valor in G:
         if valor > 0:
-            suma += valor 
+            K1 += valor 
     for valor in G2:
         if valor > 0:
-            suma += valor
-    return suma
+            K2 += valor
+    return K1 * K2
 
 def cannyOperator(img):
     img = cv2.GaussianBlur(img, (3, 3), 0)
     G = gaussiana(1)
     G2 = gaussianaDerivada(1)
     k = K(G,G2)
-    mask_x = G2[:, None] @ G[None,:]
-    mask_x = mask_x * 1 / k
-    mask_y = G[:,None] @ G2[None,:]
-    mask_y = mask_y * 1 / k
+    G2_inv = G2[::-1]
+    mask_x = 1 / k * np.dot(G[:, None], G2_inv[None,:])
+    # mask_x = mask_x * 1 / k
+    mask_y = 1 / k * np.dot(G2[:,None] , G[None,:])
+    # mask_y = mask_y * 1 / k
     
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    grad_x = cv2.filter2D(gray,-1,mask_x)
-    grad_y = cv2.filter2D(gray,-1,mask_y)
+    grad_x = cv2.filter2D(src=np.float64(gray), ddepth=-1,kernel=mask_x)
+    grad_y = cv2.filter2D(src=np.float64(gray), ddepth=-1,kernel=mask_y)
 
     grad_x_scaled = np.uint8(grad_x /2 + 128)
     grad_y_scaled = np.uint8(grad_y / 2 +128)
 
-    cv2.imshow('Gradiente en x', grad_x_scaled)
+    cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
     cv2.waitKey(0)
-    cv2.imshow('Gradiente en y', grad_y_scaled)
+    cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
+    cv2.waitKey(0)
+    
+    mod = np.sqrt(np.uint32(np.power(grad_x,2) + np.power(grad_y,2)))
+
+    cv2.imshow('Modulo canny operator', np.uint8(mod))
+    cv2.waitKey(0)
+
+    orientacion = np.arctan2(grad_y,grad_x)
+    cv2.imshow('Direction canny operator', np.uint8(orientacion))
     cv2.waitKey(0)
 
 
@@ -112,7 +123,7 @@ def cannyOperator(img):
 cap = cv2.VideoCapture(0)
 img = cv2.imread('poster.pgm', cv2.IMREAD_COLOR)
 
-#SobelOperator(img)
+SobelOperator(img)
 cannyOperator(img)
-cv2.waitKey(0)
+
 cv2.destroyAllWindows()
