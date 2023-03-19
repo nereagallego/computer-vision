@@ -95,25 +95,14 @@ def gaussianDerivative(x : float, sigma : float):
     return -x / (sigma ** 2) * np.exp((-x ** 2) / (2 * (sigma ** 2)))
 
 def cannyOperator(img):
-#    img = cv2.GaussianBlur(img, (3, 3), 0)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # sigma = 1
-    # n = 5
 
-    # ky = np.array([gaussian(x, sigma) for x in range(-n // 2 + 1, n // 2 + 1)])[:, np.newaxis]
-    # kdx = -np.array([gaussianDerivative(x, sigma) for x in range(-n // 2 + 1, n //2 + 1)])
-    # convx12= cv2.filter2D(gray, cv2.CV_64F, cv2.flip(ky, -1), borderType = cv2.BORDER_CONSTANT)
-    # gx = cv2.filter2D(convx12, cv2.CV_64F, cv2.flip(kdx, -1), borderType = cv2.BORDER_CONSTANT)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    sigma = 1
     
-    # grad_x_scaled1 = np.uint8(gx /2 + 128)
-    
-    # cv2.imshow('Gradiente en x canny operator', grad_x_scaled1)
-    # cv2.waitKey(0)
-    
-    
-    G = gaussiana(1)[:, np.newaxis]
-    G2 = gaussianaDerivada(1)
-    k = K(G,G2)
+    G = gaussiana(sigma)[:, np.newaxis]
+    G2 = gaussianaDerivada(sigma)[np.newaxis, :]
+
     G2_inv = -G2
    
     convx1 = cv2.filter2D(gray, cv2.CV_64F, cv2.flip(G,-1), borderType=cv2.BORDER_CONSTANT)
@@ -124,8 +113,8 @@ def cannyOperator(img):
     cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
     cv2.waitKey(0)
 
-    G = gaussiana(1)
-    G2 = gaussianaDerivada(1)[:, np.newaxis]
+    G = gaussiana(sigma)[np.newaxis, :]
+    G2 = gaussianaDerivada(sigma)[:, np.newaxis]
     convy1 = cv2.filter2D(gray,cv2.CV_64F, cv2.flip(G2,-1), borderType=cv2.BORDER_CONSTANT)
     grad_y = cv2.filter2D(convy1,cv2.CV_64F, cv2.flip(G,-1), borderType=cv2.BORDER_CONSTANT)
     
