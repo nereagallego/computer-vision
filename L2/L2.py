@@ -127,14 +127,14 @@ def cannyOperator(img):
     cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
     cv2.waitKey(0)
     
- #   mod = np.sqrt(np.uint32(np.power(grad_x,2) + np.power(grad_y,2)))
+    mod = np.sqrt(np.uint32(np.power(grad_x,2) + np.power(grad_y,2)))
 
-  #  cv2.imshow('Modulo canny operator', np.uint8(mod))
-   # cv2.waitKey(0)
+    cv2.imshow('Modulo canny operator', np.uint8(mod))
+    cv2.waitKey(0)
 
-    # orientacion = np.arctan2(grad_y,grad_x)
-    # cv2.imshow('Direction canny operator', np.uint8(orientacion))
-    # cv2.waitKey(0)
+    orientacion = np.arctan2(grad_y,grad_x)
+    cv2.imshow('Direction canny operator', np.uint8(orientacion))
+    cv2.waitKey(0)
 
 
 
