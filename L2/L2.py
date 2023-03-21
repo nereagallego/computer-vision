@@ -110,8 +110,8 @@ def cannyOperator(img):
     
     grad_x_scaled = np.uint8(grad_x /2 + 128)
     
-    cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
-    cv2.waitKey(0)
+    # cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
+    # cv2.waitKey(0)
 
     G = gaussiana(sigma)[np.newaxis, :]
     G2 = gaussianaDerivada(sigma)[:, np.newaxis]
@@ -124,24 +124,46 @@ def cannyOperator(img):
     grad_y_scaled = np.uint8(grad_y / 2 +128)
 
     
-    cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
-    cv2.waitKey(0)
+    # cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
+    # cv2.waitKey(0)
     
     mod = np.sqrt(np.uint32(np.power(grad_x,2) + np.power(grad_y,2)))
 
-    cv2.imshow('Modulo canny operator', np.uint8(mod))
-    cv2.waitKey(0)
+    # cv2.imshow('Modulo canny operator', np.uint8(mod))
+    # cv2.waitKey(0)
 
     orientacion = np.arctan2(grad_y,grad_x)
-    cv2.imshow('Direction canny operator', np.uint8(orientacion))
-    cv2.waitKey(0)
+    # cv2.imshow('Direction canny operator', np.uint8(orientacion))
+    # cv2.waitKey(0)
+    return grad_x, grad_y, mod, orientacion
 
-
-
+def vanishPointing(img, gx, gy, mod, orientation):
+    size_x, size_y = img.shape[1], img.shape[0]
+    index_fila_central = int(size_y/2)
+    fila_central = mod[index_fila_central, :]
+    accumulator = np.zeros(size_x, dtype = int)
+    for i in range(size_y):
+        for j in range(size_x):
+            if mod[i,j] > 10:
+                x = j - size_x / 2
+                y = size_y / 2 - i
+                theta = orientation[i,j]
+                p = x * math.cos(theta) + y * math.sin(theta)
+                accumulator[round(p)] = accumulator[round(p)] + 1
+      #          print(i,j)
+    return index_fila_central, np.argmax(accumulator)
+    
+    
+    
+    
 cap = cv2.VideoCapture(0)
-img = cv2.imread('poster.pgm', cv2.IMREAD_COLOR)
+img = cv2.imread('pasillo1.pgm', cv2.IMREAD_COLOR)
 
-SobelOperator(img)
-cannyOperator(img)
+#SobelOperator(img)
+gx, gy, mod, orientation = cannyOperator(img)
+center = vanishPointing(img, gx, gy, mod, orientation)
 
+cv2.putText(img,'x', center, 0, 4, (255,0,0),2)
+cv2.imshow('imagen',img)
+cv2.waitKey(0)
 cv2.destroyAllWindows()
