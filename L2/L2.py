@@ -137,19 +137,33 @@ def cannyOperator(img):
     # cv2.waitKey(0)
     return grad_x, grad_y, mod, orientacion
 
+#Fuente: https://www.iteramos.com/pregunta/18906/encontrar-el-valor-mas-cercano-en-el-array-de-numpy
+def find_nearest(array, value): 
+    array = np.asarray(array) 
+    idx = (np.abs(array - value)).argmin() 
+    return idx
+
+def norm_pi(ang) -> float:
+    ang = ang % (2*math.pi)
+    return ang - (2*math.pi) if ang > math.pi else ang
+
 def vanishPointing(img, gx, gy, mod, orientation):
     size_x, size_y = img.shape[1], img.shape[0]
     index_fila_central = int(size_y/2)
+    thetas = np.deg2rad(np.arange(-180.0, 180.0))
+    num_thetas = len(thetas)
+    diag_len = np.ceil(np.sqrt(size_x / 2 * size_x / 2 + size_y / 2 * size_y /2))
+    accumulator = np.zeros((2 * int(diag_len), num_thetas), dtype=np.uint64)
     fila_central = mod[index_fila_central, :]
-    accumulator = np.zeros(size_x, dtype = int)
+   # accumulator = np.zeros(size_x, dtype = int)
     for i in range(size_y):
         for j in range(size_x):
             if mod[i,j] > 10:
                 x = j - size_x / 2
                 y = size_y / 2 - i
-                theta = orientation[i,j]
+                theta = norm_pi(orientation[i,j])
                 p = x * math.cos(theta) + y * math.sin(theta)
-                accumulator[round(p)] = accumulator[round(p)] + 1
+                accumulator[round(p), find_nearest(thetas, theta)] += 1
       #          print(i,j)
     return index_fila_central, np.argmax(accumulator)
     
