@@ -9,6 +9,7 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 import math
+from operator import itemgetter
 
 def SobelOperator(imagen):
 
@@ -150,34 +151,43 @@ def norm_pi(ang) -> float:
 def vanishPointing(img, gx, gy, mod, orientation):
     size_x, size_y = img.shape[1], img.shape[0]
     index_fila_central = int(size_y/2)
-    thetas = np.deg2rad(np.arange(-180.0, 180.0))
-    num_thetas = len(thetas)
-    diag_len = np.ceil(np.sqrt(size_x / 2 * size_x / 2 + size_y / 2 * size_y /2))
-    accumulator = np.zeros((2 * int(diag_len), num_thetas), dtype=np.uint64)
-    fila_central = mod[index_fila_central, :]
-   # accumulator = np.zeros(size_x, dtype = int)
+
+
+    accumulator = np.zeros(size_x, dtype=np.uint64)
+
     for i in range(size_y):
         for j in range(size_x):
-            if mod[i,j] > 10:
+            if j == 498 and i == 9:
+                print()
+            if mod[i,j] > 131:
                 x = j - size_x / 2
                 y = size_y / 2 - i
-                theta = norm_pi(orientation[i,j])
-                p = x * math.cos(theta) + y * math.sin(theta)
-                accumulator[round(p), find_nearest(thetas, theta)] += 1
-      #          print(i,j)
-    return index_fila_central, np.argmax(accumulator)
+                theta = orientation[i,j]
+                theta_n = norm_pi(theta)
+                if not (abs(theta_n - 0) < 0.01 or abs(theta_n - math.pi) < 0.01 or abs(theta_n + math.pi) < 0.01 or abs(theta_n - math.pi/2) < 0.01 or abs(theta_n + math.pi/2) < 0.01):
+                    p = x * math.cos(theta) + y * math.sin(theta)
+                    x_int = p / math.cos(theta)
+
+                    # index en img
+                    k = round(x_int + size_x / 2)
+                    if k >= 0 and k < size_x:
+                        accumulator[k] +=1
+            print(i,j)
+    numbers_sort = sorted(enumerate(accumulator), key=itemgetter(1),  reverse=True)
+    index, value = numbers_sort[1]
+    return index_fila_central, np.argmax(accumulator), index_fila_central, index
     
     
     
     
-cap = cv2.VideoCapture(0)
-img = cv2.imread('pasillo1.pgm', cv2.IMREAD_COLOR)
+img = cv2.imread('pasillo3.pgm', cv2.IMREAD_COLOR)
 
 #SobelOperator(img)
 gx, gy, mod, orientation = cannyOperator(img)
-center = vanishPointing(img, gx, gy, mod, orientation)
+y1, x1, y2, x2 = vanishPointing(img, gx, gy, mod, orientation)
 
-cv2.putText(img,'x', center, 0, 4, (255,0,0),2)
+cv2.putText(img,'+', (x1,y1), 0, 1, (255,0,0),2)
+cv2.putText(img,'+', (x2,y2), 0, 1, (0,0,255),2)
 cv2.imshow('imagen',img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
