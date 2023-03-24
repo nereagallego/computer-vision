@@ -173,9 +173,10 @@ def vanishPointing(img, gx, gy, mod, orientation):
                     if k >= 0 and k < size_x:
                         accumulator[k] +=1
             print(i,j)
+    # segundo punto más votado
     numbers_sort = sorted(enumerate(accumulator), key=itemgetter(1),  reverse=True)
     index, value = numbers_sort[1]
-    return index_fila_central, np.argmax(accumulator), index_fila_central, index
+    return index_fila_central, np.argmax(accumulator)
     
     
     
@@ -184,10 +185,10 @@ img = cv2.imread('pasillo3.pgm', cv2.IMREAD_COLOR)
 
 #SobelOperator(img)
 gx, gy, mod, orientation = cannyOperator(img)
-y1, x1, y2, x2 = vanishPointing(img, gx, gy, mod, orientation)
+y1, x1 = vanishPointing(img, gx, gy, mod, orientation)
 
 cv2.putText(img,'+', (x1,y1), 0, 1, (255,0,0),2)
-cv2.putText(img,'+', (x2,y2), 0, 1, (0,0,255),2)
+# cv2.putText(img,'+', (x2,y2), 0, 1, (0,0,255),2)
 cv2.imshow('imagen',img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
