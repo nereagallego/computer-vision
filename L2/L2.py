@@ -105,6 +105,8 @@ def cannyOperator(img):
     G2 = gaussianaDerivada(sigma)[np.newaxis, :]
 
     G2_inv = -G2
+    
+    k = K(gaussiana(sigma),gaussianaDerivada(sigma))
    
     convx1 = cv2.filter2D(gray, cv2.CV_64F, cv2.flip(G,-1), borderType=cv2.BORDER_CONSTANT)
     grad_x = cv2.filter2D(convx1, cv2.CV_64F, cv2.flip(G2_inv,-1), borderType=cv2.BORDER_CONSTANT)
@@ -138,16 +140,6 @@ def cannyOperator(img):
     # cv2.waitKey(0)
     return grad_x, grad_y, mod, orientacion
 
-#Fuente: https://www.iteramos.com/pregunta/18906/encontrar-el-valor-mas-cercano-en-el-array-de-numpy
-def find_nearest(array, value): 
-    array = np.asarray(array) 
-    idx = (np.abs(array - value)).argmin() 
-    return idx
-
-def norm_pi(ang) -> float:
-    ang = ang % (2*math.pi)
-    return ang - (2*math.pi) if ang > math.pi else ang
-
 def vanishPointing(img, gx, gy, mod, orientation):
     size_x, size_y = img.shape[1], img.shape[0]
     index_fila_central = int(size_y/2)
@@ -163,8 +155,7 @@ def vanishPointing(img, gx, gy, mod, orientation):
                 x = j - size_x / 2
                 y = size_y / 2 - i
                 theta = orientation[i,j]
-                theta_n = norm_pi(theta)
-                if not (abs(theta_n - 0) < 0.01 or abs(theta_n - math.pi) < 0.01 or abs(theta_n + math.pi) < 0.01 or abs(theta_n - math.pi/2) < 0.01 or abs(theta_n + math.pi/2) < 0.01):
+                if not (abs(theta- 0) < 0.01 or abs(theta - math.pi) < 0.01 or abs(theta + math.pi) < 0.01 or abs(theta - math.pi/2) < 0.01 or abs(theta + math.pi/2) < 0.01):
                     p = x * math.cos(theta) + y * math.sin(theta)
                     x_int = p / math.cos(theta)
 
@@ -181,10 +172,20 @@ def vanishPointing(img, gx, gy, mod, orientation):
     
     
     
-img = cv2.imread('pasillo3.pgm', cv2.IMREAD_COLOR)
+img = cv2.imread('poster.pgm', cv2.IMREAD_COLOR)
 
-#SobelOperator(img)
+SobelOperator(img)
 gx, gy, mod, orientation = cannyOperator(img)
+grad_x_scaled = np.uint8(gx /2 + 128)
+grad_y_scaled = np.uint8(gy / 2 +128)
+cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
+cv2.waitKey(0)
+cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
+cv2.waitKey(0)
+cv2.imshow('Modulo canny operator', np.uint8(mod))
+cv2.waitKey(0)
+cv2.imshow('Direction canny operator', np.uint8(orientation))
+cv2.waitKey(0)
 y1, x1 = vanishPointing(img, gx, gy, mod, orientation)
 
 cv2.putText(img,'+', (x1,y1), 0, 1, (255,0,0),2)
