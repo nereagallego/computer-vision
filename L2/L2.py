@@ -23,7 +23,6 @@ def SobelOperator(imagen):
     
     grad_x = cv2.Sobel(gray, ddepth, 1, 0, ksize=3, scale=scale, delta=delta, borderType=cv2.BORDER_DEFAULT)
     # Gradient-Y
-    # grad_y = cv.Scharr(gray,ddepth,0,1)
     grad_y = cv2.Sobel(gray, ddepth, 0, 1, ksize=3, scale=scale, delta=delta, borderType=cv2.BORDER_DEFAULT)
 
     
@@ -43,12 +42,7 @@ def SobelOperator(imagen):
 
     cv2.imshow('Modulo Sobel operator', np.uint8(mod))
     cv2.waitKey(0)
-    # sobel_X = cv2.Sobel(imagen, cv2.CV_64F, 1, 0) 
-    # sobel_X_abs = np.uint8(np.absolute(sobel_X)) 
-    # sobel_Y = cv2.Sobel(imagen, cv2.CV_64F,0, 1) 
-    # sobel_Y_abs = np.uint8(np.absolute(sobel_Y)) 
 
-    # sobel_XY_combined = cv2.bitwise_or(sobel_Y_abs,sobel_X_abs)
     orientacion = np.arctan2(grad_y,grad_x)
     cv2.imshow('Direction Sobel operator', np.uint8(orientacion))
     cv2.waitKey(0)
@@ -163,7 +157,6 @@ def vanishPointing(img, gx, gy, mod, orientation):
                     k = round(x_int + size_x / 2)
                     if k >= 0 and k < size_x:
                         accumulator[k] +=1
-            print(i,j)
     # segundo punto más votado
     numbers_sort = sorted(enumerate(accumulator), key=itemgetter(1),  reverse=True)
     index, value = numbers_sort[1]
@@ -172,20 +165,20 @@ def vanishPointing(img, gx, gy, mod, orientation):
     
     
     
-img = cv2.imread('poster.pgm', cv2.IMREAD_COLOR)
+img = cv2.imread('pasillo2.pgm', cv2.IMREAD_COLOR)
 
-SobelOperator(img)
+# SobelOperator(img)
 gx, gy, mod, orientation = cannyOperator(img)
-grad_x_scaled = np.uint8(gx /2 + 128)
-grad_y_scaled = np.uint8(gy / 2 +128)
-cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
-cv2.waitKey(0)
-cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
-cv2.waitKey(0)
-cv2.imshow('Modulo canny operator', np.uint8(mod))
-cv2.waitKey(0)
-cv2.imshow('Direction canny operator', np.uint8(orientation))
-cv2.waitKey(0)
+# grad_x_scaled = np.uint8(gx /2 + 128)
+# grad_y_scaled = np.uint8(gy / 2 +128)
+# cv2.imshow('Gradiente en x canny operator', grad_x_scaled)
+# cv2.waitKey(0)
+# cv2.imshow('Gradiente en y canny operator', grad_y_scaled)
+# cv2.waitKey(0)
+# cv2.imshow('Modulo canny operator', np.uint8(mod))
+# cv2.waitKey(0)
+# cv2.imshow('Direction canny operator', np.uint8(orientation))
+# cv2.waitKey(0)
 y1, x1 = vanishPointing(img, gx, gy, mod, orientation)
 
 cv2.putText(img,'+', (x1,y1), 0, 1, (255,0,0),2)
