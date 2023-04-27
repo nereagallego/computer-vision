@@ -2,19 +2,21 @@ import numpy as np
 import cv2
 import tarfile
 from matplotlib import pyplot as plt
+import random
+import math
 
 import time
 
 # https://docs.opencv.org/4.x/da/df5/tutorial_py_sift_intro.html
 
-    """_summary_ Devuelve los keypoints, los descriptores, el tiempo de detección y la cantidad de características
+"""_summary_ Devuelve los keypoints, los descriptores, el tiempo de detección y la cantidad de características
 
-    Args:
-        nfeatures: number of features returned
-        contrstThreshold: filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
-        sigma: The sigma of the Gaussian applied to the input image at the octave #0
+Args:
+    nfeatures: number of features returned
+    contrstThreshold: filter out weak features in semi-uniform (low-contrast) regions. The larger the threshold, the less features are produced by the detector.
+    sigma: The sigma of the Gaussian applied to the input image at the octave #0
 
-    """
+"""
 def SIFT_keypoints(gray, nfeatures : int, contrastThreshold=0.04, sigma=1.6):
     start = time.time()
     sift = cv2.SIFT_create(nfeatures)
@@ -96,7 +98,7 @@ def bruteForce(img1,kp1, desc1,img2, kp2, desc2):
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     plt.imshow(img3),plt.show()
     #plt.imshow(img3),plt.show()
-    return time_emparejamiento, num_emparejamientos
+    return time_emparejamiento, num_emparejamientos, matches
 
 # https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html
 def flann_Matching(img1,kp1, desc1,img2, kp2, desc2):
@@ -112,16 +114,26 @@ def flann_Matching(img1,kp1, desc1,img2, kp2, desc2):
     # Need to draw only good matches, so create a mask
     matchesMask = [[0,0] for i in range(len(matches))]
     # ratio test as per Lowe's paper
+    good = []
     for i,(m,n) in enumerate(matches):
         if m.distance < 0.7*n.distance:
+            
+            good.append(matches[i])
+    good = []
+    i = 0
+    for m,n in matches:
+        if m.distance < 0.7*n.distance:
             matchesMask[i]=[1,0]
+            good.append(m)
+            i += 1
     draw_params = dict(matchColor = (0,255,0),
                     singlePointColor = (255,0,0),
                     matchesMask = matchesMask,
                     flags = cv2.DrawMatchesFlags_DEFAULT)
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
     plt.imshow(img3,),plt.show()
-    return time_emparejamiento, len(matches)
+            
+    return time_emparejamiento, len(matches), good
 
 img = cv2.imread('BuildingScene/building1.JPG')
 gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -131,7 +143,88 @@ gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
 
 
+def calculate_RANSAC_function(gray, gray2):
+    kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
+    kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
+    time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
 
+    src_pts = np.float32([ kp1[m.queryIdx].pt for m in matches1 ]).reshape(-1,1,2)
+    dst_pts = np.float32([ kp2[m.trainIdx].pt for m in matches1 ]).reshape(-1,1,2)
+
+    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+    matchesMask = mask.ravel().tolist()
+
+    h,w = gray.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,M)
+    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                       singlePointColor = None,
+                       matchesMask = matchesMask, # draw only inliers
+                       flags = 2)
+    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    plt.imshow(img3, 'gray')
+    plt.show()
+
+def calculate_RANSAC_own(gray, gray2):
+    kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
+    kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
+    time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
+
+
+    num_iterations = 10
+    num_samples = 4
+    best_model_rate = 0
+    best_model = None
+    best_matches_mask = None
+    finished = False
+    
+    while not finished:
+
+        np.random.shuffle(matches1)
+        matches = matches1[:num_samples]
+
+        src_pts = np.float32([ kp1[m.queryIdx].pt for m in matches ]).reshape(-1,1,2)
+        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
+        M, mask = cv2.findHomography(src_pts, dst_pts, 0,5.0)
+        matchesMask = mask.ravel().tolist()
+
+        rest_matches = matches1[num_samples:]
+        model = 0
+        for m in rest_matches:
+            pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
+            dst2 = cv2.perspectiveTransform(pts,M)
+            pts2 = pts[0][0]
+            pts2b = np.array([pts2[0], pts2[1], 1])[:,np.newaxis] 
+            pts2b = np.dot(M,  pts2b)
+            dst = [pts2b[0] / pts2b[2], pts2b[1] / pts2b[2]]
+            dst = np.array([dst[0][0], dst[1][0]])
+            # dst = dst[0][0]
+            x,y = kp2[m.trainIdx].pt
+            
+            err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
+            if err < 2:
+               model += 1 
+        if model >= len(matches1) * 0.5:
+            best_model_rate = model
+            best_model = M
+            best_matches_mask = matchesMask
+            finished = True
+            
+    h,w = gray.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,best_model)
+    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                       singlePointColor = None,
+                        # draw only inliers
+                       flags = 2)
+    kp12 = [kp1[m.queryIdx] for m in matches1 ]
+    kp22 = [kp2[m.trainIdx] for m in matches1]
+    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    plt.imshow(img3, 'gray')
+    plt.show()
+            
 
 
 dst = HARRIS_keypoints(gray)
@@ -153,13 +246,16 @@ dst = HARRIS_keypoints(gray)
 
 
 img2 = cv2.imread('BuildingScene/building2.JPG')
-gray2= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+gray2= cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
 
-kp1, desc1, time_detection, num_features = ORB_keypoints(gray,500)
-kp2, desc2, time_detection2, num_features2  = ORB_keypoints(gray2,500)
-time1, num_matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
-time2, num_matches2 = bruteForce(gray, kp1, desc1, img2, kp2, desc2)
+kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
+kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
+time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
+time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, img2, kp2, desc2)
 
 print(time1, ' ', time2)
 print(num_matches1, ' ', num_matches2)
+
+#calculate_RANSAC_function(gray, gray2)
+calculate_RANSAC_own(gray, gray2)
 
