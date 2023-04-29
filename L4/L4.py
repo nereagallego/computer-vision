@@ -6,6 +6,7 @@ import random
 import math
 
 import time
+import os
 
 # https://docs.opencv.org/4.x/da/df5/tutorial_py_sift_intro.html
 
@@ -165,6 +166,24 @@ def calculate_RANSAC_function(gray, gray2):
     img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
     plt.imshow(img3, 'gray')
     plt.show()
+    return M
+
+
+def trim(frame):
+    #crop top
+    if not np.sum(frame[0]):
+        return trim(frame[1:])
+    #crop bottom
+    elif not np.sum(frame[-1]):
+        return trim(frame[:-1])
+    #crop left
+    elif not np.sum(frame[:,0]):
+        return trim(frame[:,1:]) 
+    #crop right
+    elif not np.sum(frame[:,-1]):
+        return trim(frame[:,:-1])    
+    return frame
+
 
 def calculate_RANSAC_own(gray, gray2):
     kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
@@ -205,25 +224,42 @@ def calculate_RANSAC_own(gray, gray2):
             err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
             if err < 2:
                model += 1 
-        if model >= len(matches1) * 0.5:
+        if model >= len(matches1) * 0.2:
             best_model_rate = model
             best_model = M
             best_matches_mask = matchesMask
             finished = True
             
-    h,w = gray.shape
-    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    dst = cv2.perspectiveTransform(pts,best_model)
-    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-                       singlePointColor = None,
-                        # draw only inliers
-                       flags = 2)
-    kp12 = [kp1[m.queryIdx] for m in matches1 ]
-    kp22 = [kp2[m.trainIdx] for m in matches1]
-    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
-    plt.imshow(img3, 'gray')
-    plt.show()
+    # h,w = gray.shape
+    # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    # dst = cv2.perspectiveTransform(pts,best_model)
+    # img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    # draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+    #                    singlePointColor = None,
+    #                     # draw only inliers
+    #                    flags = 2)
+    # kp12 = [kp1[m.queryIdx] for m in matches1 ]
+    # kp22 = [kp2[m.trainIdx] for m in matches1]
+    # img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    # plt.imshow(img3, 'gray')
+    # plt.show()
+
+    # dst = cv2.warpPerspective(gray,best_model,((gray.shape[1] + gray2.shape[1]), gray2.shape[0])) #wraped image
+    # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2 #stitched image
+    # plt.imshow(dst)
+    # plt.show()
+
+    return best_model
+    # out = warpImages(gray, gray2, best_model)
+    # plt.imshow(out)
+    # plt.show()
+
+
+def construct_panorama(gray, gray2, H):
+    dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
+    dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
+    return trim(dst)
+
             
 
 
@@ -257,5 +293,19 @@ print(time1, ' ', time2)
 print(num_matches1, ' ', num_matches2)
 
 #calculate_RANSAC_function(gray, gray2)
-calculate_RANSAC_own(gray, gray2)
+_  = calculate_RANSAC_own(gray2, gray)
+
+files = os.listdir('./BuildingScene')
+base = cv2.imread('./BuildingScene/'+files[0])
+base = cv2.cvtColor(base,cv2.COLOR_BGR2GRAY)
+
+for i in range(1, len(files)):
+    img = cv2.imread('./BuildingScene/' + files[i])
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    H = calculate_RANSAC_own(img,base)
+    base = construct_panorama(img,base, H)
+    plt.imshow(base)
+    plt.show()
+
 
