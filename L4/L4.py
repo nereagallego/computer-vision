@@ -249,10 +249,41 @@ def calculate_RANSAC_own(gray, gray2):
     # plt.imshow(dst)
     # plt.show()
 
+    
     return best_model
     # out = warpImages(gray, gray2, best_model)
     # plt.imshow(out)
     # plt.show()
+
+
+def stitch_images(img1, img2, H):
+    # Obtener la forma de las imágenes de entrada
+    h1, w1 = img1.shape
+    h2, w2 = img2.shape
+
+    # Proyectar las esquinas de la imagen 2 hacia la imagen 1
+    corners = np.array([[0, 0], [0, h2 - 1], [w2 - 1, h2 - 1], [w2 - 1, 0]], dtype=np.float32)
+    corners = np.array([corners])
+    projected_corners = cv2.perspectiveTransform(corners, H)
+
+    # Obtener el ancho total y la altura máxima de las imágenes proyectadas
+    max_width = int(max(projected_corners[:, :, 0].max(), w1))
+    max_height = int(max(projected_corners[:, :, 1].max(), h1))
+
+    # Crear una matriz de destino para unir las imágenes
+    result = np.zeros((max_height, max_width), dtype=np.uint8)
+
+    # Proyectar la imagen 2 sobre la imagen 1
+    result_warped = cv2.warpPerspective(img2, H, (max_width, max_height))
+
+    # Copiar la imagen 1 en la matriz de destino
+    result[0:h1, 0:w1] = img1
+
+    # Unir la imagen 2 en la matriz de destino
+    mask = result_warped != 0
+    result[mask] = result_warped[mask]
+
+    return result
 
 
 def construct_panorama(gray, gray2, H):
@@ -309,3 +340,43 @@ for i in range(1, len(files)):
     plt.show()
 
 
+"""
+"""
+files = os.listdir('./BuildingScene')
+base = cv2.imread('./BuildingScene/'+files[0])
+"""
+files = []
+files.append("BuildingScene/building1.JPG")
+files.append("BuildingScene/building2.JPG")
+files.append("BuildingScene/building3.JPG")
+files.append("BuildingScene/building4.JPG")
+files.append("BuildingScene/building5.JPG")
+
+
+#Guardamos las imagenes de las que se va a crear el panorama
+gray_images = []
+for i in range(1, len(files) + 1):
+    img = cv2.imread(files[i-1])
+    new_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray_images.append(new_gray)
+    #cv2.imshow('Panorama '.format(i), gray_images[i-1])
+    #cv2.waitKey(0)
+
+
+
+# Se obtiene el panorama de las dos primeras imagenes
+H = calculate_RANSAC_own(gray_images[1], gray_images[0])
+panorama = stitch_images(gray_images[0],gray_images[1],H)
+
+
+for i in range(2,len(gray_images)):
+    print("itero")
+    H = calculate_RANSAC_own(gray_images[i],panorama)
+    panorama = stitch_images(panorama,gray_images[i],H)
+
+
+cv2.imshow('Panorama Total', panorama)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+"""
