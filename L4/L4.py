@@ -206,24 +206,26 @@ def calculate_RANSAC_own(gray, gray2):
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in matches ]).reshape(-1,1,2)
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
         M, mask = cv2.findHomography(src_pts, dst_pts, 0,5.0)
+        
         matchesMask = mask.ravel().tolist()
 
         rest_matches = matches1[num_samples:]
         model = 0
-        for m in rest_matches:
-            pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
-            dst2 = cv2.perspectiveTransform(pts,M)
-            dst = dst2[0][0]
-            x,y = kp2[m.trainIdx].pt
-            
-            err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
-            if err < 2:
-               model += 1 
-        if model >= 20:
-            best_model_rate = model
-            best_model = M
-            best_matches_mask = matchesMask
-            finished = True
+        if M is not None:
+            for m in rest_matches:
+                pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
+                dst2 = cv2.perspectiveTransform(pts,M)
+                dst = dst2[0][0]
+                x,y = kp2[m.trainIdx].pt
+                
+                err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
+                if err < 2:
+                   model += 1 
+            if model >= 20:
+                best_model_rate = model
+                best_model = M
+                best_matches_mask = matchesMask
+                finished = True
             
     # h,w = gray.shape
     # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
