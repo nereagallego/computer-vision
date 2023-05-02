@@ -213,12 +213,12 @@ def calculate_RANSAC_own(gray, gray2):
         for m in rest_matches:
             pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
             dst2 = cv2.perspectiveTransform(pts,M)
-            pts2 = pts[0][0]
-            pts2b = np.array([pts2[0], pts2[1], 1])[:,np.newaxis] 
-            pts2b = np.dot(M,  pts2b)
-            dst = [pts2b[0] / pts2b[2], pts2b[1] / pts2b[2]]
-            dst = np.array([dst[0][0], dst[1][0]])
-            # dst = dst[0][0]
+            # pts2 = pts[0][0]
+            # pts2b = np.array([pts2[0], pts2[1], 1])[:,np.newaxis] 
+            # pts2b = np.dot(M,  pts2b)
+            # dst = [pts2b[0] / pts2b[2], pts2b[1] / pts2b[2]]
+            # dst = np.array([dst[0][0], dst[1][0]])
+            dst = dst2[0][0]
             x,y = kp2[m.trainIdx].pt
             
             err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
