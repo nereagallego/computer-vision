@@ -230,19 +230,19 @@ def calculate_RANSAC_own(gray, gray2):
             best_matches_mask = matchesMask
             finished = True
             
-    # h,w = gray.shape
-    # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    # dst = cv2.perspectiveTransform(pts,best_model)
-    # img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-    # draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-    #                    singlePointColor = None,
-    #                     # draw only inliers
-    #                    flags = 2)
-    # kp12 = [kp1[m.queryIdx] for m in matches1 ]
-    # kp22 = [kp2[m.trainIdx] for m in matches1]
-    # img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
-    # plt.imshow(img3, 'gray')
-    # plt.show()
+    h,w = gray.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,best_model)
+    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                       singlePointColor = None,
+                        # draw only inliers
+                       flags = 2)
+    kp12 = [kp1[m.queryIdx] for m in matches1 ]
+    kp22 = [kp2[m.trainIdx] for m in matches1]
+    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    plt.imshow(img3, 'gray')
+    plt.show()
 
     # dst = cv2.warpPerspective(gray,best_model,((gray.shape[1] + gray2.shape[1]), gray2.shape[0])) #wraped image
     # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2 #stitched image
@@ -296,6 +296,40 @@ def stitch_images(img1, img2, H):
 
 
 def construct_panorama(gray, gray2, H):
+    h,w = gray.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,H)
+    dst = dst.reshape(4,2)
+    min_x = math.inf
+    min_y = math.inf
+    if dst[0][0] < 0 and dst[0][0] < dst[1][0]:
+        min_x = dst[0][0]
+    elif dst[1][0] < 0:
+        min_x = dst[1][0]
+    else:
+        min_x = 0
+        
+    if dst[0][1] < 0 and dst[0][1] < dst[1][1]:
+        min_y = dst[0][1]
+    elif dst[1][1] < 0:
+        min_y = dst[1][1]
+    else:
+        min_y = 0
+        
+    translation = np.array([[1, 0, -min_x], [0, 1, -min_y],[0, 0, 1]])
+    
+    h2, w2 = gray2.shape
+    new_container = np.zeros((h2-int(min_x)+1,w2-int(min_y)+1))
+    
+    im = cv2.warpPerspective(gray, H, (gray.shape[0] , gray.shape[1]))
+    new_container = cv2.warpPerspective(gray2, translation, (gray2.shape[0] -int(min_x)+1 , gray2.shape[1] -int(min_y)+1))
+    
+    
+    plt.imshow(im)
+    plt.show()
+    plt.imshow(new_container)
+    plt.show()
+        
     dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
     dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
     return trim(dst)
@@ -343,8 +377,8 @@ for i in range(1, len(files)):
     img = cv2.imread('./BuildingScene/' + files[i])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    H = calculate_RANSAC_own(img,base)
-    base = construct_panorama(img,base, H)
+    H = calculate_RANSAC_own(base,img)
+    base = construct_panorama(base,img, H)
     plt.imshow(base)
     plt.show()
 
