@@ -186,8 +186,8 @@ def trim(frame):
 
 
 def calculate_RANSAC_own(gray, gray2):
-    kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
-    kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
+    kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,1000)
+    kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,1000)
     time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
 
 
@@ -213,36 +213,31 @@ def calculate_RANSAC_own(gray, gray2):
         for m in rest_matches:
             pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
             dst2 = cv2.perspectiveTransform(pts,M)
-            # pts2 = pts[0][0]
-            # pts2b = np.array([pts2[0], pts2[1], 1])[:,np.newaxis] 
-            # pts2b = np.dot(M,  pts2b)
-            # dst = [pts2b[0] / pts2b[2], pts2b[1] / pts2b[2]]
-            # dst = np.array([dst[0][0], dst[1][0]])
             dst = dst2[0][0]
             x,y = kp2[m.trainIdx].pt
             
             err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
             if err < 2:
                model += 1 
-        if model >= len(matches1) * 0.2:
+        if model >= 20:
             best_model_rate = model
             best_model = M
             best_matches_mask = matchesMask
             finished = True
             
-    h,w = gray.shape
-    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    dst = cv2.perspectiveTransform(pts,best_model)
-    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-                       singlePointColor = None,
-                        # draw only inliers
-                       flags = 2)
-    kp12 = [kp1[m.queryIdx] for m in matches1 ]
-    kp22 = [kp2[m.trainIdx] for m in matches1]
-    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
-    plt.imshow(img3, 'gray')
-    plt.show()
+    # h,w = gray.shape
+    # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    # dst = cv2.perspectiveTransform(pts,best_model)
+    # img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    # draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+    #                    singlePointColor = None,
+    #                     # draw only inliers
+    #                    flags = 2)
+    # kp12 = [kp1[m.queryIdx] for m in matches1 ]
+    # kp22 = [kp2[m.trainIdx] for m in matches1]
+    # img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    # plt.imshow(img3, 'gray')
+    # plt.show()
 
     # dst = cv2.warpPerspective(gray,best_model,((gray.shape[1] + gray2.shape[1]), gray2.shape[0])) #wraped image
     # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2 #stitched image
@@ -254,45 +249,6 @@ def calculate_RANSAC_own(gray, gray2):
     # out = warpImages(gray, gray2, best_model)
     # plt.imshow(out)
     # plt.show()
-
-
-def stitch_images(img1, img2, H):
-    # Obtener la forma de las imágenes de entrada
-    h1, w1 = img1.shape
-    h2, w2 = img2.shape
-
-    # Proyectar las esquinas de la imagen 2 hacia la imagen 1
-    corners = np.array([[0, 0], [0, h2 - 1], [w2 - 1, h2 - 1], [w2 - 1, 0]], dtype=np.float32)
-    corners = np.array([corners])
-    projected_corners = cv2.perspectiveTransform(corners, H)
-
-    #Si projected corners son positivos solo hay que escalar los puntos
-
-    #Si sale algun punto con coord negativa -> aplicar traslacion para que se convierta en coord 0
-
-    if projected_corners.min() < 0:
-        abs_min = abs(projected_corners.min())
-        projected_corners += abs_min
-
-    # Obtener el ancho total y la altura máxima de las imágenes proyectadas
-    max_width = int(max(projected_corners[:, :, 0].max(), w1))
-    max_height = int(max(projected_corners[:, :, 1].max(), h1))
-
-    # Crear una matriz de destino para unir las imágenes
-    result = np.zeros((max_height, max_width), dtype=np.uint8)
-
-    # Proyectar la imagen 2 sobre la imagen 1
-    result_warped = cv2.warpPerspective(img2, H, (max_width, max_height))
-
-    # Copiar la imagen 1 en la matriz de destino
-    result[0:h1, 0:w1] = img1
-
-    # Unir la imagen 2 en la matriz de destino
-    mask = result_warped != 0
-    result[mask] = result_warped[mask]
-
-
-    return result
 
 
 def construct_panorama(gray, gray2, H):
@@ -328,25 +284,29 @@ def construct_panorama(gray, gray2, H):
     
     
     if min_x < 0:
-        im = cv2.warpPerspective(gray, H, (gray.shape[0] , gray.shape[1]))
-        new_container = cv2.warpPerspective(gray2, translation, (gray2.shape[0] +gray.shape[0] , h))
-        plt.imshow(im)
+        H = calculate_RANSAC_own(gray2,gray)
+        dst = cv2.warpPerspective(gray2,H,(gray.shape[1] + gray2.shape[1], gray.shape[0]))
+        dst[0:gray.shape[0], 0:gray.shape[1]] = gray
+        # H_inv = np.linalg.inv(H)
+        # im = cv2.warpPerspective(gray, H, (gray.shape[0]+gray2.shape[0] , gray.shape[1]))
+        # new_container = cv2.warpPerspective(gray2, translation, (im.shape[0] +gray.shape[0], h))
+        # plt.imshow(im)
+        # plt.show()
+        # plt.imshow(new_container)
+        # plt.show()
+        # new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
+        plt.imshow(dst)
         plt.show()
-        plt.imshow(new_container)
-        plt.show()
-        new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
     else:
         dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
         dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
         
         plt.imshow(dst)
         plt.show()
-
-    plt.imshow(new_container)
-    plt.show()
+  
         
-    dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
-    dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
+    # dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
+    # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
     return trim(dst)
 
             
@@ -384,11 +344,36 @@ print(num_matches1, ' ', num_matches2)
  #calculate_RANSAC_function(gray, gray2)
 _  = calculate_RANSAC_own(gray2, gray)
 
+
+
 files = os.listdir('./BuildingScene')
-base = cv2.imread('./BuildingScene/'+files[2])
+
+idx = len(files) //2
+base = cv2.imread('./BuildingScene/'+files[idx])
 base = cv2.cvtColor(base,cv2.COLOR_BGR2GRAY)
 
-for i in range(1, len(files)):
+
+i = idx - 1
+j = idx + 1
+turn = True
+index = None
+while i >= 0 and j < len(files):
+    index = i if turn else j
+    img = cv2.imread('./BuildingScene/' + files[index])
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    H = calculate_RANSAC_own(base,img)
+    base = construct_panorama(base,img, H)
+    plt.imshow(base)
+    plt.show()
+    if turn:
+        i -= 1
+        turn = False
+    else: 
+        j += 1
+        turn = True
+
+while i >= 0:
     img = cv2.imread('./BuildingScene/' + files[i])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -396,7 +381,18 @@ for i in range(1, len(files)):
     base = construct_panorama(base,img, H)
     plt.imshow(base)
     plt.show()
+    i -= 1
+    
+while j <= len(files):
+    img = cv2.imread('./BuildingScene/' + files[j])
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+    H = calculate_RANSAC_own(base,img)
+    base = construct_panorama(base,img, H)
+    plt.imshow(base)
+    plt.show()
+    j += 1
+    
 
 """
 
