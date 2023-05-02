@@ -296,6 +296,7 @@ def stitch_images(img1, img2, H):
 
 
 def construct_panorama(gray, gray2, H):
+    
     h,w = gray.shape
     pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
     dst = cv2.perspectiveTransform(pts,H)
@@ -316,17 +317,31 @@ def construct_panorama(gray, gray2, H):
     else:
         min_y = 0
         
-    translation = np.array([[1, 0, -min_x], [0, 1, -min_y],[0, 0, 1]])
+    translation = np.float32([[1, 0, -min_x], [0, 1, -min_y],[0, 0, 1]])
     
     h2, w2 = gray2.shape
     new_container = np.zeros((h2-int(min_x)+1,w2-int(min_y)+1))
     
-    im = cv2.warpPerspective(gray, H, (gray.shape[0] , gray.shape[1]))
-    new_container = cv2.warpPerspective(gray2, translation, (gray2.shape[0] -int(min_x)+1 , gray2.shape[1] -int(min_y)+1))
     
     
-    plt.imshow(im)
-    plt.show()
+    
+    
+    
+    if min_x < 0:
+        im = cv2.warpPerspective(gray, H, (gray.shape[0] , gray.shape[1]))
+        new_container = cv2.warpPerspective(gray2, translation, (gray2.shape[0] +gray.shape[0] , h))
+        plt.imshow(im)
+        plt.show()
+        plt.imshow(new_container)
+        plt.show()
+        new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
+    else:
+        dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
+        dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
+        
+        plt.imshow(dst)
+        plt.show()
+
     plt.imshow(new_container)
     plt.show()
         
@@ -370,7 +385,7 @@ print(num_matches1, ' ', num_matches2)
 _  = calculate_RANSAC_own(gray2, gray)
 
 files = os.listdir('./BuildingScene')
-base = cv2.imread('./BuildingScene/'+files[0])
+base = cv2.imread('./BuildingScene/'+files[2])
 base = cv2.cvtColor(base,cv2.COLOR_BGR2GRAY)
 
 for i in range(1, len(files)):
