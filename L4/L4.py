@@ -266,6 +266,14 @@ def stitch_images(img1, img2, H):
     corners = np.array([corners])
     projected_corners = cv2.perspectiveTransform(corners, H)
 
+    #Si projected corners son positivos solo hay que escalar los puntos
+
+    #Si sale algun punto con coord negativa -> aplicar traslacion para que se convierta en coord 0
+
+    if projected_corners.min() < 0:
+        abs_min = abs(projected_corners.min())
+        projected_corners += abs_min
+
     # Obtener el ancho total y la altura máxima de las imágenes proyectadas
     max_width = int(max(projected_corners[:, :, 0].max(), w1))
     max_height = int(max(projected_corners[:, :, 1].max(), h1))
@@ -282,6 +290,7 @@ def stitch_images(img1, img2, H):
     # Unir la imagen 2 en la matriz de destino
     mask = result_warped != 0
     result[mask] = result_warped[mask]
+
 
     return result
 
@@ -323,7 +332,7 @@ time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, img2, kp2, desc2)
 print(time1, ' ', time2)
 print(num_matches1, ' ', num_matches2)
 
-#calculate_RANSAC_function(gray, gray2)
+ #calculate_RANSAC_function(gray, gray2)
 _  = calculate_RANSAC_own(gray2, gray)
 
 files = os.listdir('./BuildingScene')
@@ -341,15 +350,15 @@ for i in range(1, len(files)):
 
 
 """
-"""
+
 files = os.listdir('./BuildingScene')
-base = cv2.imread('./BuildingScene/'+files[0])
+base = cv2.imread('./BuildingScene/'+files[0]) """
 """
 files = []
-files.append("BuildingScene/building1.JPG")
-files.append("BuildingScene/building2.JPG")
 files.append("BuildingScene/building3.JPG")
+files.append("BuildingScene/building2.JPG")
 files.append("BuildingScene/building4.JPG")
+files.append("BuildingScene/building1.JPG")
 files.append("BuildingScene/building5.JPG")
 
 
@@ -378,5 +387,4 @@ for i in range(2,len(gray_images)):
 cv2.imshow('Panorama Total', panorama)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
-"""
+ """
