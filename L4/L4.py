@@ -385,7 +385,7 @@ while i >= 0:
     plt.show()
     i -= 1
     
-while j <= len(files):
+while j < len(files):
     img = cv2.imread('./BuildingScene/' + files[j])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
