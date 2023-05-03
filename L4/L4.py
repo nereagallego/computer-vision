@@ -276,66 +276,70 @@ def calculate_RANSAC_own(gray, gray2):
     # plt.imshow(out)
     # plt.show()
 
-
+# https://www.kaggle.com/code/phsophea101/image-stitching-two-images-using-opencv-python
 def construct_panorama(gray, gray2, H):
     
     h,w = gray.shape
-    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    dst = cv2.perspectiveTransform(pts,H)
-    dst = dst.reshape(4,2)
-    min_x = math.inf
-    min_y = math.inf
-    if dst[0][0] < 0 and dst[0][0] < dst[1][0]:
-        min_x = dst[0][0]
-    elif dst[1][0] < 0:
-        min_x = dst[1][0]
-    else:
-        min_x = 0
-        
-    if dst[0][1] < 0 and dst[0][1] < dst[1][1]:
-        min_y = dst[0][1]
-    elif dst[1][1] < 0:
-        min_y = dst[1][1]
-    else:
-        min_y = 0
-        
-    translation = np.float32([[1, 0, -min_x], [0, 1, -min_y],[0, 0, 1]])
-    
     h2, w2 = gray2.shape
-    new_container = np.zeros((h2-int(min_x)+1,w2-int(min_y)+1))
-    
-    
-    
-    
-    
-    
-    if min_x < 0:
-        H , añadir= calculate_RANSAC_own(gray2,gray)
-        if añadir:
-            dst = cv2.warpPerspective(gray2,H,(gray.shape[1] + gray2.shape[1], gray.shape[0]))
-            dst[0:gray.shape[0], 0:gray.shape[1]] = gray
-            plt.imshow(dst)
-            plt.show()
-        # H_inv = np.linalg.inv(H)
-        # im = cv2.warpPerspective(gray, H, (gray.shape[0]+gray2.shape[0] , gray.shape[1]))
-        # new_container = cv2.warpPerspective(gray2, translation, (im.shape[0] +gray.shape[0], h))
-        # plt.imshow(im)
-        # plt.show()
-        # plt.imshow(new_container)
-        # plt.show()
-        # new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
+    pts = np.float32([ [0,0],[0,h],[w,h],[w,0] ]).reshape(-1,1,2)
+    pts2 = np.float32([[0,0], [0,h2],[w2,h2],[w2,0]]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,H)
+    # dst = dst.reshape(4,2)
+
+    list_of_points = np.concatenate((pts2, dst), axis=0)
+    [x_min, y_min] = np.int32(list_of_points.min(axis=0).ravel())
+    [x_max, y_max] = np.int32(list_of_points.max(axis=0).ravel())
         
-    else:
-        dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
-        dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
+    translation_dist = [-x_min,-y_min]
+    H_translation = np.array([[1, 0, translation_dist[0]], [0, 1, translation_dist[1]], [0,0,1]])
+    output_img = cv2.warpPerspective(gray, 
+                                     H_translation.dot(H), 
+                                     (x_max - x_min, y_max - y_min))
+    plt.imshow(output_img)
+    plt.show()
+    output_img[translation_dist[1]:h2+translation_dist[1], 
+               translation_dist[0]:w2+translation_dist[0]] = gray2
+    plt.imshow(output_img)
+    plt.show()
+    # h2, w2 = gray2.shape
+    # new_container = np.zeros((h2-int(min_x)+1,w2-int(min_y)+1))
+    
+    
+    # # h = np.max(gray.shape[1], gray2.shape[1])
+    
+    
+    
+    # if min_x < 0:
+    #     # H , añadir= calculate_RANSAC_own(gray2,gray)
+    #     # if añadir:
+    #     #     dst = cv2.warpPerspective(gray2,H,(gray.shape[1] + gray2.shape[1], gray.shape[0]))
+    #     #     dst[0:gray.shape[0], 0:gray.shape[1]] = gray
+    #     #     plt.imshow(dst)
+    #     #     plt.show()
+    #     H_inv = np.linalg.inv(H)
+    #     # im = cv2.warpPerspective(gray,translation,(gray.shape[1] - int(min_y), gray.shape[0] - int(min_x)))
+    #     im = cv2.warpPerspective(gray,H_inv, (gray.shape[1], gray.shape[0]))
         
-        plt.imshow(dst)
-        plt.show()
+    #     # im = cv2.warpPerspective(im,translation,(im.shape[1], im.shape[0]))
+    #     plt.imshow(im)
+    #     plt.show()
+    #     new_container = cv2.warpPerspective(gray2, translation, (im.shape[1] +gray2.shape[1], gray2.shape[0]))
+        
+    #     plt.imshow(new_container)
+    #     plt.show()
+    #     new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
+        
+    # else:
+    #     dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
+    #     dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
+        
+    #     plt.imshow(dst)
+    #     plt.show()
   
         
     # dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
     # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
-    return trim3(dst)
+    return trim3(output_img)
 
             
 
@@ -373,7 +377,7 @@ def construct_panorama(gray, gray2, H):
 # _  = calculate_RANSAC_own(gray2, gray)
 
 
-directory = './3dScene/'
+directory = './PosterScene/'
 files = os.listdir(directory)
 
 idx = len(files) //2
