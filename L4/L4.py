@@ -184,6 +184,19 @@ def trim(frame):
         return trim(frame[:,:-1])    
     return frame
 
+def trim2(frame):
+    _,thresh = cv2.threshold(frame,1,255,cv2.THRESH_BINARY)
+    contours,hierarchy = cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    cnt = contours[0]
+    x,y,w,h = cv2.boundingRect(cnt)
+    crop = img[y:y+h,x:x+w]
+    return crop
+
+def trim3(img,tol=0):
+    # img is 2D image data
+    # tol  is tolerance
+    mask = img>tol
+    return img[np.ix_(mask.any(1),mask.any(0))]
 
 def calculate_RANSAC_own(gray, gray2):
     kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,1000)
@@ -197,8 +210,19 @@ def calculate_RANSAC_own(gray, gray2):
     best_model = None
     best_matches_mask = None
     finished = False
+    añadir = True
+
+    start_time = time.time()
+    max_time = 30 #Tiempo maximo en segundos
     
     while not finished:
+
+        current_time = time.time()
+        elapsed_time = current_time - start_time
+
+        if elapsed_time >= max_time:
+            añadir = False
+            break
 
         np.random.shuffle(matches1)
         matches = matches1[:num_samples]
@@ -247,7 +271,7 @@ def calculate_RANSAC_own(gray, gray2):
     # plt.show()
 
     
-    return best_model
+    return best_model, añadir
     # out = warpImages(gray, gray2, best_model)
     # plt.imshow(out)
     # plt.show()
@@ -286,9 +310,12 @@ def construct_panorama(gray, gray2, H):
     
     
     if min_x < 0:
-        H = calculate_RANSAC_own(gray2,gray)
-        dst = cv2.warpPerspective(gray2,H,(gray.shape[1] + gray2.shape[1], gray.shape[0]))
-        dst[0:gray.shape[0], 0:gray.shape[1]] = gray
+        H , añadir= calculate_RANSAC_own(gray2,gray)
+        if añadir:
+            dst = cv2.warpPerspective(gray2,H,(gray.shape[1] + gray2.shape[1], gray.shape[0]))
+            dst[0:gray.shape[0], 0:gray.shape[1]] = gray
+            plt.imshow(dst)
+            plt.show()
         # H_inv = np.linalg.inv(H)
         # im = cv2.warpPerspective(gray, H, (gray.shape[0]+gray2.shape[0] , gray.shape[1]))
         # new_container = cv2.warpPerspective(gray2, translation, (im.shape[0] +gray.shape[0], h))
@@ -297,8 +324,7 @@ def construct_panorama(gray, gray2, H):
         # plt.imshow(new_container)
         # plt.show()
         # new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
-        plt.imshow(dst)
-        plt.show()
+        
     else:
         dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
         dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
@@ -309,12 +335,12 @@ def construct_panorama(gray, gray2, H):
         
     # dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
     # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
-    return trim(dst)
+    return trim3(dst)
 
             
 
 
-dst = HARRIS_keypoints(gray)
+# dst = HARRIS_keypoints(gray)
 # Threshold for an optimal value, it may vary depending on the image.
 # img[dst>0.01*dst.max()]=[0,0,255]
 # cv2.imshow('dst',img)
@@ -332,26 +358,26 @@ dst = HARRIS_keypoints(gray)
 # cv2.destroyAllWindows()
 
 
-img2 = cv2.imread('BuildingScene/building2.JPG')
-gray2= cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+# img2 = cv2.imread('BuildingScene/building2.JPG')
+# gray2= cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
 
-kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
-kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
-time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
-time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, img2, kp2, desc2)
+# kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
+# kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
+# time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
+# time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, img2, kp2, desc2)
 
-print(time1, ' ', time2)
-print(num_matches1, ' ', num_matches2)
+# print(time1, ' ', time2)
+# print(num_matches1, ' ', num_matches2)
 
- #calculate_RANSAC_function(gray, gray2)
-_  = calculate_RANSAC_own(gray2, gray)
+#  #calculate_RANSAC_function(gray, gray2)
+# _  = calculate_RANSAC_own(gray2, gray)
 
 
-
-files = os.listdir('./BuildingScene')
+directory = './3dScene/'
+files = os.listdir(directory)
 
 idx = len(files) //2
-base = cv2.imread('./BuildingScene/'+files[idx])
+base = cv2.imread(directory+files[idx])
 base = cv2.cvtColor(base,cv2.COLOR_BGR2GRAY)
 
 
@@ -361,13 +387,14 @@ turn = True
 index = None
 while i >= 0 and j < len(files):
     index = i if turn else j
-    img = cv2.imread('./BuildingScene/' + files[index])
+    img = cv2.imread(directory + files[index])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    H = calculate_RANSAC_own(base,img)
-    base = construct_panorama(base,img, H)
-    plt.imshow(base)
-    plt.show()
+    H , añadir = calculate_RANSAC_own(base,img)
+    if añadir:
+        base = construct_panorama(base,img, H)
+        plt.imshow(base)
+        plt.show()
     if turn:
         i -= 1
         turn = False
@@ -376,24 +403,29 @@ while i >= 0 and j < len(files):
         turn = True
 
 while i >= 0:
-    img = cv2.imread('./BuildingScene/' + files[i])
+    img = cv2.imread(directory + files[i])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    H = calculate_RANSAC_own(base,img)
-    base = construct_panorama(base,img, H)
-    plt.imshow(base)
-    plt.show()
+    H, añadir = calculate_RANSAC_own(base,img)
+    if añadir:
+        base = construct_panorama(base,img, H)
+        plt.imshow(base)
+        plt.show()
     i -= 1
     
 while j < len(files):
-    img = cv2.imread('./BuildingScene/' + files[j])
+    img = cv2.imread(directory + files[j])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    H = calculate_RANSAC_own(base,img)
-    base = construct_panorama(base,img, H)
-    plt.imshow(base)
-    plt.show()
+    H, añadir = calculate_RANSAC_own(base,img)
+    if añadir:
+        base = construct_panorama(base,img, H)
+        plt.imshow(base)
+        plt.show()
     j += 1
+    
+plt.imshow(base)
+plt.show()
     
 
 """
