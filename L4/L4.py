@@ -98,7 +98,7 @@ def bruteForce(img1,kp1, desc1,img2, kp2, desc2):
     num_emparejamientos = len(matches)
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     plt.imshow(img3),plt.show()
-    #plt.imshow(img3),plt.show()
+    # plt.imshow(img3),plt.show()
     return time_emparejamiento, num_emparejamientos, matches
 
 # https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html
@@ -116,14 +116,9 @@ def flann_Matching(img1,kp1, desc1,img2, kp2, desc2):
     matchesMask = [[0,0] for i in range(len(matches))]
     # ratio test as per Lowe's paper
     good = []
-    for i,(m,n) in enumerate(matches):
-        if m.distance < 0.7*n.distance:
-            
-            good.append(matches[i])
-    good = []
     i = 0
     for m,n in matches:
-        if m.distance < 0.7*n.distance:
+        if m.distance < 0.8*n.distance:
             matchesMask[i]=[1,0]
             good.append(m)
             i += 1
@@ -149,6 +144,8 @@ def calculate_RANSAC_function(gray, gray2):
     dst_pts = np.float32([ kp2[m.trainIdx].pt for m in matches1 ]).reshape(-1,1,2)
 
     M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+    if M is None:
+        return None, False
     matchesMask = mask.ravel().tolist()
 
     h,w = gray.shape
@@ -162,7 +159,7 @@ def calculate_RANSAC_function(gray, gray2):
     img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
     plt.imshow(img3, 'gray')
     plt.show()
-    return M
+    return M, True
 
 def trim3(img,tol=0):
     # img is 2D image data
@@ -175,8 +172,6 @@ def calculate_RANSAC_own(gray, gray2):
     kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,1000)
     time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
 
-
-    num_iterations = 10
     num_samples = 4
     best_model_rate = 0
     best_model = None
@@ -223,25 +218,19 @@ def calculate_RANSAC_own(gray, gray2):
                 best_matches_mask = matchesMask
                 finished = True
             
-    # h,w = gray.shape
-    # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    # dst = cv2.perspectiveTransform(pts,best_model)
-    # img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-    # draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-    #                    singlePointColor = None,
-    #                     # draw only inliers
-    #                    flags = 2)
-    # kp12 = [kp1[m.queryIdx] for m in matches1 ]
-    # kp22 = [kp2[m.trainIdx] for m in matches1]
-    # img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
-    # plt.imshow(img3, 'gray')
-    # plt.show()
-
-    # dst = cv2.warpPerspective(gray,best_model,((gray.shape[1] + gray2.shape[1]), gray2.shape[0])) #wraped image
-    # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2 #stitched image
-    # plt.imshow(dst)
-    # plt.show()
-
+    h,w = gray.shape
+    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    dst = cv2.perspectiveTransform(pts,best_model)
+    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+                        singlePointColor = None,
+                        # draw only inliers
+                        flags = 2)
+    kp12 = [kp1[m.queryIdx] for m in matches1 ]
+    kp22 = [kp2[m.trainIdx] for m in matches1]
+    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    plt.imshow(img3, 'gray')
+    plt.show()
     
     return best_model, añadir
     # out = warpImages(gray, gray2, best_model)
@@ -283,43 +272,70 @@ gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 # img=cv2.drawKeypoints(gray,kp,img)
 # cv2.imwrite('sift_keypoints.jpg',img)
             
-kp, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
-img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
-plt.imshow(img2), plt.show()
+# kp, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
+# img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
+# plt.imshow(img2), plt.show()
 
-dst = HARRIS_keypoints(gray)
+# dst = HARRIS_keypoints(gray)
 # Threshold for an optimal value, it may vary depending on the image.
-img[dst>0.01*dst.max()]=[0,0,255]
-plt.imshow(img)
-plt.show()
+# img[dst>0.01*dst.max()]=[0,0,255]
+# plt.imshow(img)
+# plt.show()
 # cv2.imshow('dst',img)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-kp, _, _, _ = ORB_keypoints(gray)
-img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
-plt.imshow(img2), plt.show()
+# kp, _, _, _ = ORB_keypoints(gray)
+# img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
+# plt.imshow(img2), plt.show()
 
-kp, _, _, _ = AKAZE_keypoints(gray)
-img=cv2.drawKeypoints(gray,kp,img)
-plt.imshow(img)
-plt.show()
+# kp, _, _, _ = AKAZE_keypoints(gray)
+# img=cv2.drawKeypoints(gray,kp,img)
+# plt.imshow(img)
+# plt.show()
 
 
+# img = cv2.imread('BuildingScene/Building2.JPG')
+# gray2 = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
-# img2 = cv2.imread('BuildingScene/building2.JPG')
-# gray2= cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+# kp1, desc1, time1,_ = SIFT_keypoints(gray,500)
+# kp2, desc2, _,_ = SIFT_keypoints(gray2,500)
+# img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
+# plt.imshow(img2), plt.show()
+# print(time1)
 
-# kp1, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
-# kp2, desc2, time_detection2, num_features2  = SIFT_keypoints(gray2,500)
+# time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, gray2, kp2, desc2)
 # time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
-# time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, img2, kp2, desc2)
-
-# print(time1, ' ', time2)
 # print(num_matches1, ' ', num_matches2)
+# print(time1, ' ', time2)
 
-#  #calculate_RANSAC_function(gray, gray2)
-# _  = calculate_RANSAC_own(gray2, gray)
+# kp1, desc1, time1, _ = ORB_keypoints(gray)
+# kp2, desc2, _, _ = ORB_keypoints(gray2)
+# img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
+# plt.imshow(img2), plt.show()
+# print(time1)
+
+# time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, gray2, kp2, desc2)
+# time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
+# print(num_matches1, ' ', num_matches2)
+# print(time1, ' ', time2)
+
+# kp1, desc1, time1, _ = AKAZE_keypoints(gray)
+# kp2, desc2, _, _ = AKAZE_keypoints(gray2)
+# img=cv2.drawKeypoints(gray,kp,img)
+# plt.imshow(img)
+# print(time1)
+
+# time2, num_matches2, matches2 = bruteForce(gray, kp1, desc1, gray2, kp2, desc2)
+# time1, num_matches1, matches1 = flann_Matching(gray, kp1, desc1, gray2, kp2, desc2)
+# print(num_matches1, ' ', num_matches2)
+# print(time1, ' ', time2)
+# plt.show()
+
+
+
+
+
 
 
 directory = './BuildingScene/'
