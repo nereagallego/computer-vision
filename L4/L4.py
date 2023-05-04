@@ -49,7 +49,7 @@ def HARRIS_keypoints(gray, blockSize=2, ksize = 3, k = 0.04):
             nfeatures: number of features returned
             edgeThreshold:	This is size of the border where the features are not detected. 
     """
-def ORB_keypoints(gray, nfeatures, edgeThreshold = 31):
+def ORB_keypoints(gray, nfeatures = 500, edgeThreshold = 31):
 
     # Initiate ORB detector
     start = time.time()
@@ -136,11 +136,7 @@ def flann_Matching(img1,kp1, desc1,img2, kp2, desc2):
             
     return time_emparejamiento, len(matches), good
 
-img = cv2.imread('BuildingScene/building1.JPG')
-gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-# kp = SIFT_keypoints(gray)
-# img=cv2.drawKeypoints(gray,kp,img)
-# cv2.imwrite('sift_keypoints.jpg',img)
+
 
 
 
@@ -167,30 +163,6 @@ def calculate_RANSAC_function(gray, gray2):
     plt.imshow(img3, 'gray')
     plt.show()
     return M
-
-
-def trim(frame):
-    #crop top
-    if not np.sum(frame[0]):
-        return trim(frame[1:])
-    #crop bottom
-    elif not np.sum(frame[-1]):
-        return trim(frame[:-1])
-    #crop left
-    elif not np.sum(frame[:,0]):
-        return trim(frame[:,1:]) 
-    #crop right
-    elif not np.sum(frame[:,-1]):
-        return trim(frame[:,:-1])    
-    return frame
-
-def trim2(frame):
-    _,thresh = cv2.threshold(frame,1,255,cv2.THRESH_BINARY)
-    contours,hierarchy = cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-    cnt = contours[0]
-    x,y,w,h = cv2.boundingRect(cnt)
-    crop = img[y:y+h,x:x+w]
-    return crop
 
 def trim3(img,tol=0):
     # img is 2D image data
@@ -300,66 +272,39 @@ def construct_panorama(gray, gray2, H):
     output_img[translation_dist[1]:h2+translation_dist[1], 
                translation_dist[0]:w2+translation_dist[0]] = gray2
     plt.imshow(output_img)
-    plt.show()
-    # h2, w2 = gray2.shape
-    # new_container = np.zeros((h2-int(min_x)+1,w2-int(min_y)+1))
-    
-    
-    # # h = np.max(gray.shape[1], gray2.shape[1])
-    
-    
-    
-    # if min_x < 0:
-    #     # H , añadir= calculate_RANSAC_own(gray2,gray)
-    #     # if añadir:
-    #     #     dst = cv2.warpPerspective(gray2,H,(gray.shape[1] + gray2.shape[1], gray.shape[0]))
-    #     #     dst[0:gray.shape[0], 0:gray.shape[1]] = gray
-    #     #     plt.imshow(dst)
-    #     #     plt.show()
-    #     H_inv = np.linalg.inv(H)
-    #     # im = cv2.warpPerspective(gray,translation,(gray.shape[1] - int(min_y), gray.shape[0] - int(min_x)))
-    #     im = cv2.warpPerspective(gray,H_inv, (gray.shape[1], gray.shape[0]))
+    plt.show()   
         
-    #     # im = cv2.warpPerspective(im,translation,(im.shape[1], im.shape[0]))
-    #     plt.imshow(im)
-    #     plt.show()
-    #     new_container = cv2.warpPerspective(gray2, translation, (im.shape[1] +gray2.shape[1], gray2.shape[0]))
-        
-    #     plt.imshow(new_container)
-    #     plt.show()
-    #     new_container[0:gray2.shape[0], 0:gray2.shape[1]] = im
-        
-    # else:
-    #     dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
-    #     dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
-        
-    #     plt.imshow(dst)
-    #     plt.show()
-  
-        
-    # dst = cv2.warpPerspective(gray,H,(gray2.shape[1] + gray.shape[1], gray2.shape[0]))
-    # dst[0:gray2.shape[0], 0:gray2.shape[1]] = gray2
     return trim3(output_img)
 
+
+img = cv2.imread('BuildingScene/building1.JPG')
+gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+# kp = SIFT_keypoints(gray)
+# img=cv2.drawKeypoints(gray,kp,img)
+# cv2.imwrite('sift_keypoints.jpg',img)
             
+kp, desc1, time_detection, num_features = SIFT_keypoints(gray,500)
+img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
+plt.imshow(img2), plt.show()
 
-
-# dst = HARRIS_keypoints(gray)
+dst = HARRIS_keypoints(gray)
 # Threshold for an optimal value, it may vary depending on the image.
-# img[dst>0.01*dst.max()]=[0,0,255]
+img[dst>0.01*dst.max()]=[0,0,255]
+plt.imshow(img)
+plt.show()
 # cv2.imshow('dst',img)
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-# kp = ORB_keypoints(gray)
-# img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
-# plt.imshow(img2), plt.show()
+kp, _, _, _ = ORB_keypoints(gray)
+img2 = cv2.drawKeypoints(gray, kp, None, color=(0,255,0), flags=0)
+plt.imshow(img2), plt.show()
 
-# kp = AKAZE_keypoints(gray)
-# img=cv2.drawKeypoints(gray,kp,img)
-# cv2.imshow('AKAZE', img)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+kp, _, _, _ = AKAZE_keypoints(gray)
+img=cv2.drawKeypoints(gray,kp,img)
+plt.imshow(img)
+plt.show()
+
 
 
 # img2 = cv2.imread('BuildingScene/building2.JPG')
@@ -377,7 +322,7 @@ def construct_panorama(gray, gray2, H):
 # _  = calculate_RANSAC_own(gray2, gray)
 
 
-directory = './PosterScene/'
+directory = './BuildingScene/'
 files = os.listdir(directory)
 
 idx = len(files) //2
