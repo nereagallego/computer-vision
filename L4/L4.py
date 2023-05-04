@@ -157,8 +157,8 @@ def calculate_RANSAC_function(gray, gray2):
                        matchesMask = matchesMask, # draw only inliers
                        flags = 2)
     img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
-    plt.imshow(img3, 'gray')
-    plt.show()
+    # plt.imshow(img3, 'gray')
+    # plt.show()
     return M, True
 
 def trim3(img,tol=0):
@@ -197,40 +197,42 @@ def calculate_RANSAC_own(gray, gray2):
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in matches ]).reshape(-1,1,2)
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
         M, mask = cv2.findHomography(src_pts, dst_pts, 0,5.0)
-        
-        matchesMask = mask.ravel().tolist()
-
-        rest_matches = matches1[num_samples:]
-        model = 0
         if M is not None:
-            for m in rest_matches:
-                pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
-                dst2 = cv2.perspectiveTransform(pts,M)
-                dst = dst2[0][0]
-                x,y = kp2[m.trainIdx].pt
-                
-                err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
-                if err < 2:
-                   model += 1 
-            if model >= 20:
-                best_model_rate = model
-                best_model = M
-                best_matches_mask = matchesMask
-                finished = True
             
-    h,w = gray.shape
-    pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-    dst = cv2.perspectiveTransform(pts,best_model)
-    img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
-    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-                        singlePointColor = None,
-                        # draw only inliers
-                        flags = 2)
-    kp12 = [kp1[m.queryIdx] for m in matches1 ]
-    kp22 = [kp2[m.trainIdx] for m in matches1]
-    img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
-    plt.imshow(img3, 'gray')
-    plt.show()
+        
+            matchesMask = mask.ravel().tolist()
+    
+            rest_matches = matches1[num_samples:]
+            model = 0
+            if M is not None:
+                for m in rest_matches:
+                    pts = np.float32( kp1[m.queryIdx].pt ).reshape(-1,1,2)
+                    dst2 = cv2.perspectiveTransform(pts,M)
+                    dst = dst2[0][0]
+                    x,y = kp2[m.trainIdx].pt
+                    
+                    err = math.sqrt((dst[0] - x) ** 2 + (dst[1] - y) ** 2)
+                    if err < 2:
+                       model += 1 
+                if model >= 20:
+                    best_model_rate = model
+                    best_model = M
+                    best_matches_mask = matchesMask
+                    finished = True
+            
+    # h,w = gray.shape
+    # pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+    # dst = cv2.perspectiveTransform(pts,best_model)
+    # img2 = cv2.polylines(gray2,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+    # draw_params = dict(matchColor = (0,255,0), # draw matches in green color
+    #                     singlePointColor = None,
+    #                     # draw only inliers
+    #                     flags = 2)
+    # kp12 = [kp1[m.queryIdx] for m in matches1 ]
+    # kp22 = [kp2[m.trainIdx] for m in matches1]
+    # img3 = cv2.drawMatches(gray,kp1,gray2,kp2,matches1,None,**draw_params)
+    # plt.imshow(img3, 'gray')
+    # plt.show()
     
     return best_model, añadir
     # out = warpImages(gray, gray2, best_model)
@@ -338,7 +340,7 @@ gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
 
 
-directory = './BuildingScene/'
+directory = './3dScene2/'
 files = os.listdir(directory)
 
 idx = len(files) //2
